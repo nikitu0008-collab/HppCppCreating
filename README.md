@@ -73,19 +73,19 @@ uint64_t Player::totalPlayers_ = {};
 📦 Installation
 Clone and compile
 
-git clone https://github.com/yourusername/cpp-class-generator.git
-cd cpp-class-generator
+git clone https://github.com/nikitu0008-collab/HppCppCreating.git
+cd HppCppCreating
 mkdir build && cd build
 cmake ..
 make
 
 Or simply compile manually (no CMake required)
 
-g++ -std=c++23 -Iinclude -o cpp_class_gen main.cpp src/class_generator.cpp
+g++ -std=c++23 -Iinclude -o create main.cpp src/create.cpp
 
 Run
 
-./cpp_class_gen
+./create
 
 🖥️ Usage Example
 
@@ -127,9 +127,9 @@ Static field / method	append static or prefix method with static
 
 cpp-class-generator/
 ├── include/
-│   └── class_generator.hpp    # Public API
+│   └── create.hpp    # Public API
 ├── src/
-│   └── class_generator.cpp    # Implementation
+│   └── create.cpp    # Implementation
 ├── main.cpp                   # Interactive CLI
 ├── CMakeLists.txt
 └── README.md
