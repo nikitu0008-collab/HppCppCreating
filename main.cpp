@@ -1,132 +1,112 @@
-#include <stdexcept>
-#include <string>
-#include <iostream>
+#include "../include/create.hpp"
 #include <cstdlib>
-#include <cstdint>
+#include <exception>
+#include <iostream>
 #include <print>
-#include <fstream>
+#include <string>
 #include <vector>
 
-//#include "include/create.hpp"
-
-//TODO сначало ВСЮ реализацию сделаю здесь потом перенесу под hpp и классы и тд
-
-static auto funcClear()->void{
-    #ifdef _WIN32
-        system("cls");
-    #elif defined(__linux__)
-        system("clear");
-    #endif
+static void clearScreen() {
+#ifdef _WIN32
+    system("cls");
+#elif defined(__linux__) || defined(__unix__)
+    system("clear");
+#endif
 }
-//TODO записи можно делать сразу после ответа пользователя веть тут нет меню
+
 auto main() -> int {
-    uint16_t col_class, col_method, type_method;
-    std::string name_file, name;
+    try {
+        std::string fileName;
+        std::print("Enter file name (without extension): ");
+        std::getline(std::cin, fileName);
+        clearScreen();
 
-    std::vector<std::string> name_class;
+        ClassGenerator gen(fileName);
 
-    std::print("Enter name file: ");
-    std::getline(std::cin, name_file);
-   
-    funcClear();
+        std::string className;
+        std::print("Class name: ");
+        std::getline(std::cin, className);
+        gen.setClassName(className);
 
-    std::fstream hpp(name_file + ".hpp");
-    std::fstream cpp(name_file + ".cpp");
-    if(!hpp.is_open()){
-        throw std::runtime_error("file not creating or opening");
-    } else if(!cpp.is_open()){
-        throw std::runtime_error("file not creating or opening");
-    }
+        std::string baseClass;
+        std::print("Base class (public inheritance, leave empty if none): ");
+        std::getline(std::cin, baseClass);
+        if (!baseClass.empty()) { gen.setBaseClass(baseClass); }
 
-    std::print("enter quantity class: ");
-    std::cin >> col_class;
+        // Ввод полей
+        std::println("\n--- Define fields ---");
+        std::println("For each field enter: type name [static] [mutable] [no_getter] [no_setter] [no_nodiscard]");
+        std::println("Empty line finishes fields.");
+        while (true) {
+            std::string line;
+            std::print("> ");
+            std::getline(std::cin, line);
+            if (line.empty()) { break; }
 
-    for(size_t i = 0; i < col_class ; i++){
-        std::print("class {}\n\tname: ",i + 1);
-        std::cin >> name;
-        hpp << "class " << name << "{" 
-        cpp << "class " << name_file << "::" << 
-        name_class.emplace_back(name);
-        
-        std::print("Enter quantity private variables\n>_:");
-        std::cin >> quantity_private;
-
-        for(size_t i = 0 ; i < quantity_private ; i++){
-
-            std::println("enter private type variables"
-                    "(1.std::string 2.double 3.int 4.bool 5.char 6.float)"
-                    ": ");
-            std::cin >> type_variables;
-            switch(type_variables){
-                case 1: 
-                    variables.emplace_back("std::string");
-                    std::print("Enter name: ");
-                    std::getline(std::cin, name);
-                    break; 
-                case 2: variables.emplace_back("double");
+            Field f;
+            std::vector<std::string> tokens;
+            size_t pos = 0;
+            while (pos < line.size()) {
+                size_t const sp = line.find(' ', pos);
+                if (sp == std::string::npos) {
+                    tokens.push_back(line.substr(pos));
                     break;
-                case 3: variables.emplace_back("int");
-                    break;
-                case 4: variables.emplace_back("bool");
-                    break;
-                case 5: variables.emplace_back("char");
-                    break;
-                case 6: variables.emplace_back("float");
-                    break;
-                default:
-                    std::cerr << "Error choice" << std::endl;
-                    break;
+                }
+                tokens.push_back(line.substr(pos, sp - pos));
+                pos = sp + 1;
             }
-        }
-        std::print("Enter col method: ");
-        std::cin >> col_method;
-        for(size_t i = 0 ; i < col_method ; i++){
-            std::print("[1.void][2.float][3.int][4.double][5.std::string]"
-                    ":_>"
-                    );
-            std::cin >> type_method;
-            switch(type_method){
-                case 1: method.emplace_back("void");
-                break;
-                case 2: method.emplace_back("float");
-                break;
-                case 3: method.emplace_back("int");
-                break;
-                case 4: method.emplace_back("double");
-                break;
-                case 5: method.emplace_back("std::string");
-                break;
-                default:
-                std::cerr << "Error type method" << std::endl;
-                break;
+
+            if (tokens.size() < 2) {
+                std::cerr << "  Error: need at least type and name\n";
+                continue;
             }
-        }
-        //hpp
-        hpp << "#pragma once" << std::endl;
-        if(type_method == "std::string" or type_variables == "std::string"){
-            hpp << "#include <string>" << std::endl;
-        } else if(type_variables == "uint16_t"){ //другие тоже доделать
-            hpp << "#include <cstdint>" << std::endl;    
-        }
-        hpp << "class " << name_class << "{"
-            << "    public:"
-            << "        " << name_class << "(){}"
-            << "        ~" << name_class << "(){}"
-            <<""
-            <<"         " << type_method << " " << name_method << "(){}" 
-            <<"     private:"
-            <<"     " << type_variables[i] << " " << name_variables[i];
-        hpp.close();
-        //cpp
-        cpp << "#include \"" << name_file<< ".hpp \"" << std::endl;
-        if(type_method == "std::string" or type_variables == "std::string"){
-            cpp << "#include <string>" << std::endl;
+            f.type = tokens[0];
+            f.name = tokens[1];
+
+            for (size_t i = 2; i < tokens.size(); ++i) {
+                if (tokens[i] == "static") f.isStatic = true;
+                else if (tokens[i] == "mutable") f.isMutable = true;
+                else if (tokens[i] == "no_getter") f.generateGetter = false;
+                else if (tokens[i] == "no_setter") f.generateSetter = false;
+                else if (tokens[i] == "no_nodiscard") f.nodiscard = false;
+                else std::cerr << "  Unknown flag: " << tokens[i] << "\n";
+            }
+            gen.addField(f);
+            std::println("  Added field: {} {}", f.type, f.name);
         }
 
-        cpp.close();
+        // Ввод дополнительных методов
+        std::println("\n--- Additional methods (enter signature, e.g. \"void foo() const override\") ---");
+        std::println("Prefix with 'static ' if needed. Empty line to stop.");
+        while (true) {
+            std::print("> ");
+            std::string sig;
+            std::getline(std::cin, sig);
+            if (sig.empty()) break;
+            CustomMethod m;
+            if (sig.rfind("static ", 0) == 0) {
+                m.isStatic = true;
+                sig = sig.substr(7); // remove "static "
+            }
+            m.signature = sig;
+            gen.addCustomMethod(m);
+        }
+
+        // Настройки конструкторов
+        std::string choice;
+        std::print("\nGenerate default constructor? (y/n) [y]: ");
+        std::getline(std::cin, choice);
+        gen.setGenerateDefaultCtor(choice != "n");
+        std::print("Generate parameterized constructor (all fields)? (y/n) [y]: ");
+        std::getline(std::cin, choice);
+        gen.setGenerateParamCtor(choice != "n");
+
+        gen.generate();
+        std::println("\nFiles {}.hpp and {}.cpp generated successfully.", fileName, fileName);
+        std::println("You can now edit them to add more complex logic.");
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return EXIT_FAILURE;
     }
-    
     return EXIT_SUCCESS;
-};
-//TODO сначало разобраться с реализацией в hpp потом только в cpp
-//Так-как в cpp легче будет делать дальнейшие действия
+}
